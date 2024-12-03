@@ -289,7 +289,7 @@ class MathUP_Luzin_321
                         break;
                 }
 
-                Console.WriteLine("Посмотреть другие варианты решения?: ");
+                Console.WriteLine("\nПосмотреть другие варианты решения?: ");
                 Console.WriteLine(" |  1. Да");
                 Console.WriteLine(" |  2. Нет");
 
