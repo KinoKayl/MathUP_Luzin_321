@@ -31,23 +31,27 @@ class MathUP_Luzin_321
             string inputString = "";
             for (int i = 0; i < n; i++)
             {
-                Console.Write($"Введите стоимости для поставщика {i+1}: ");
+                Console.Write($"Введите стоимости для поставщика {i + 1}: ");
                 inputString = Console.ReadLine();
 
-                string[] numbers = inputString.Split(' '); 
+                string[] numbers = inputString.Split(' ');
                 if (numbers.Length != m)
                 {
                     Console.WriteLine("Количество ресурсов не соответствует количеству потребителей");
-                    
                     return;
                 }
                 else
                 {
                     for (int j = 0; j < numbers.Length; j++)
                     {
-                        if (int.TryParse(numbers[j], out int num)) 
+                        if (double.TryParse(numbers[j], out double num))
                         {
                             costs[i, j] = num;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Некорректный ввод. Введите числовые значения, разделенные пробелами.");
+                            return;
                         }
                     }
                 }
@@ -57,7 +61,12 @@ class MathUP_Luzin_321
             for (int i = 0; i < n; i++)
             {
                 Console.Write($"Ресурс поставщика {i + 1}: ");
-                supply[i] = double.Parse(Console.ReadLine());
+                if (!double.TryParse(Console.ReadLine(), out double supplyValue) || supplyValue < 0)
+                {
+                    Console.WriteLine("Некорректный ввод. Введите неотрицательное числовое значение.");
+                    return;
+                }
+                supply[i] = supplyValue;
             }
 
             resupply = supply;
@@ -66,14 +75,143 @@ class MathUP_Luzin_321
             for (int j = 0; j < m; j++)
             {
                 Console.Write($"Потребность потребителя {j + 1}: ");
-                demand[j] = double.Parse(Console.ReadLine());
+                if (!double.TryParse(Console.ReadLine(), out double demandValue) || demandValue < 0)
+                {
+                    Console.WriteLine("Некорректный ввод. Введите неотрицательное числовое значение.");
+                    return;
+                }
+                demand[j] = demandValue;
             }
 
             redemand = demand;
             PrintMatrix(costs);
 
         }
-        
+
+        //Метод северо-западного угла
+        public void SolveNorthWestCorner()
+        {
+            double[,] transportationPlan = new double[n, m];
+            int i = 0, j = 0;
+
+            while (i < n && j < m)
+            {
+                double minVal = Math.Min(supply[i], demand[j]);
+                transportationPlan[i, j] = minVal;
+                supply[i] -= minVal;
+                demand[j] -= minVal;
+
+                if (supply[i] == 0) i++;
+                if (demand[j] == 0) j++;
+            }
+
+            Console.WriteLine("\nПлан перевозок (северо-западный угол):");
+            PrintMatrix(transportationPlan);
+
+            double totalCost = CalculateTotalCost(transportationPlan);
+            Console.WriteLine($"\nОбщая стоимость перевозок: {totalCost}");
+        }
+
+        private double CalculateTotalCost(double[,] plan)
+        {
+            double totalCost = 0;
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    totalCost += plan[i, j] * costs[i, j];
+                }
+            }
+            return totalCost;
+        }
+
+        //Вывод матрицы
+        private void RePrint()
+        {
+            demand = redemand;
+            supply = resupply;
+            PrintMatrix(costs);
+        }
+
+        private void PrintMatrix(double[,] matrix)
+        {
+            Console.WriteLine("\nПолучившаяся матрица: ");
+            for (int i = 0; i < matrix.GetLength(0); i++)
+            {
+                for (int j = 0; j < matrix.GetLength(1); j++)
+                {
+                    Console.Write($"| {matrix[i, j],8} ");
+                }
+
+                Console.WriteLine($"|      {supply[i]}");
+            }
+            Console.WriteLine();
+            for (int j = 0; j < demand.Length; j++)
+            {
+                Console.Write($"| {demand[j],8} ");
+            }
+            Console.WriteLine("\n");
+
+        }
+
+
+        //Составление опорного плана методом минимального элемента
+        public void SolveMinElement()
+        {
+            double[,] transportationPlan = new double[n, m];
+            double[] rowMin = new double[n];
+            double[] colMin = new double[m];
+
+            for (int i = 0; i < n; i++)
+            {
+                rowMin[i] = double.MaxValue;
+                for (int j = 0; j < m; j++)
+                {
+                    rowMin[i] = Math.Min(rowMin[i], costs[i, j]);
+                }
+            }
+            for (int j = 0; j < m; j++)
+            {
+                colMin[j] = double.MaxValue;
+                for (int i = 0; i < n; i++)
+                {
+                    colMin[j] = Math.Min(colMin[j], costs[i, j]);
+                }
+            }
+
+
+            while (true)
+            {
+                int minRow = -1, minCol = -1;
+                double minCost = double.MaxValue;
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = 0; j < m; j++)
+                    {
+                        if (costs[i, j] < minCost && supply[i] > 0 && demand[j] > 0)
+                        {
+                            minCost = costs[i, j];
+                            minRow = i;
+                            minCol = j;
+                        }
+                    }
+                }
+                if (minRow == -1) break;
+
+                double minVal = Math.Min(supply[minRow], demand[minCol]);
+                transportationPlan[minRow, minCol] = minVal;
+                supply[minRow] -= minVal;
+                demand[minCol] -= minVal;
+            }
+
+            Console.WriteLine("\nПлан перевозок (метод минимального элемента):");
+            PrintMatrix(transportationPlan);
+
+            double totalCost = CalculateTotalCost(transportationPlan);
+            Console.WriteLine($"\nОбщая стоимость перевозок: {totalCost}");
+
+        }
+
         //Симпекс метод
         public void SolveSimpleIterativeMethod()
         {
@@ -184,71 +322,7 @@ class MathUP_Luzin_321
             return (minVal, minRow, minCol);
         }
 
-        //Метод северо-западного угла
-        public void SolveNorthWestCorner()
-        {
-            double[,] transportationPlan = new double[n, m];
-            int i = 0, j = 0;
-
-            while (i < n && j < m)
-            {
-                double minVal = Math.Min(supply[i], demand[j]);
-                transportationPlan[i, j] = minVal;
-                supply[i] -= minVal;
-                demand[j] -= minVal;
-
-                if (supply[i] == 0) i++;
-                if (demand[j] == 0) j++;
-            }
-
-            Console.WriteLine("\nПлан перевозок (северо-западный угол):");
-            PrintMatrix(transportationPlan);
-
-            double totalCost = CalculateTotalCost(transportationPlan);
-            Console.WriteLine($"\nОбщая стоимость перевозок: {totalCost}");
-        }
-
-        private double CalculateTotalCost(double[,] plan)
-        {
-            double totalCost = 0;
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = 0; j < m; j++)
-                {
-                    totalCost += plan[i, j] * costs[i, j];
-                }
-            }
-            return totalCost;
-        }
         
-        //Вывод матрицы
-        private void RePrint() 
-        {
-            demand = redemand;
-            supply = resupply;
-            PrintMatrix(costs);
-        }
-
-        private void PrintMatrix(double[,] matrix)
-        {
-            Console.WriteLine("\nПолучившаяся матрица: ");
-            for (int i = 0; i < matrix.GetLength(0); i++)
-            {
-                for (int j = 0; j < matrix.GetLength(1); j++)
-                {
-                    Console.Write($"| {matrix[i, j],8} ");
-                }
-
-                Console.WriteLine($"|      {supply[i]}");
-            }
-            Console.WriteLine();
-            for (int j = 0; j < demand.Length; j++)
-            {
-                Console.Write($"| {demand[j],8} ");
-            }
-            Console.WriteLine("\n");
-
-        }
 
         public static void Main(string[] args)
         {
@@ -278,8 +352,10 @@ class MathUP_Luzin_321
                         problem.SolveNorthWestCorner();
                         break;
                     case 2:
-                        (double minVal, int minRow, int minCol) minElement = problem.FindMinElement();
-                        Console.WriteLine($"\nМинимальный элемент: {minElement.minVal} (строка {minElement.minRow + 1}, столбец {minElement.minCol + 1})");
+                        problem.SolveMinElement();
+
+                       // (double minVal, int minRow, int minCol) minElement = problem.FindMinElement();
+                        // Console.WriteLine($"\nМинимальный элемент: {minElement.minVal} (строка {minElement.minRow + 1}, столбец {minElement.minCol + 1})");
                         break;
                     case 3:
                         problem.SolveSimpleIterativeMethod();
@@ -289,7 +365,7 @@ class MathUP_Luzin_321
                         break;
                 }
 
-                Console.WriteLine("\nПосмотреть другие варианты решения?: ");
+                Console.WriteLine("\n(в разработке!) Посмотреть другие варианты решения?: ");
                 Console.WriteLine(" |  1. Да");
                 Console.WriteLine(" |  2. Нет");
 
